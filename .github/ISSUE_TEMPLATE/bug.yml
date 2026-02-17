@@ -1,0 +1,17 @@
+name: 오류 신고 (Bug)
+description: 잘못된 정보나 깨진 링크 등을 신고하세요
+labels: ["bug"]
+body:
+  - type: input
+    id: doc
+    attributes:
+      label: 대상 문서 경로
+      placeholder: "예: ko/guide/beginner/how-to-give-context.md"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: 어떤 오류인가요?
+    validations:
+      required: true

@@ -1,0 +1,21 @@
+name: 문서 개선 제안 (Improvement)
+description: 기존 문서의 개선이 필요할 때
+labels: ["improvement"]
+body:
+  - type: input
+    id: doc
+    attributes:
+      label: 대상 문서 경로
+      placeholder: "예: ko/guide/beginner/how-to-give-context.md"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 어떤 점이 문제인가요?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: 어떻게 개선하면 좋을까요?

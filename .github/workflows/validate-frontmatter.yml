@@ -1,0 +1,65 @@
+name: Validate Frontmatter
+
+on:
+  pull_request:
+    paths:
+      - 'ko/**/*.md'
+      - 'en/**/*.md'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pyyaml
+        run: pip install pyyaml
+
+      - name: Validate frontmatter
+        run: |
+          python3 << 'PYEOF'
+          import os, sys, yaml, glob
+
+          REQUIRED = ['title', 'slug', 'purpose', 'level', 'persona', 'status', 'lang', 'translationKey']
+          VALID = {
+            'purpose': ['guide', 'rule', 'template', 'example', 'reference'],
+            'level':   ['beginner', 'intermediate', 'advanced'],
+            'status':  ['draft', 'review', 'stable', 'recommended', 'deprecated'],
+            'lang':    ['ko', 'en'],
+          }
+
+          errors = []
+          files = glob.glob('ko/**/*.md', recursive=True) + glob.glob('en/**/*.md', recursive=True)
+
+          for path in files:
+            with open(path) as f:
+              content = f.read()
+            if not content.startswith('---'):
+              errors.append(f"{path}: frontmatter 없음")
+              continue
+            try:
+              fm = yaml.safe_load(content.split('---')[1])
+            except Exception as e:
+              errors.append(f"{path}: YAML 파싱 오류 - {e}")
+              continue
+            if not fm:
+              errors.append(f"{path}: frontmatter 비어있음")
+              continue
+            for field in REQUIRED:
+              if field not in fm:
+                errors.append(f"{path}: 필수 항목 누락 - '{field}'")
+            for field, valid_vals in VALID.items():
+              if field in fm:
+                val = fm[field] if isinstance(fm[field], list) else [fm[field]]
+                for v in val:
+                  if v not in valid_vals:
+                    errors.append(f"{path}: '{field}' 값 오류 - '{v}' (허용: {valid_vals})")
+
+          if errors:
+            print("❌ Frontmatter 유효성 검사 실패:\n")
+            for e in errors:
+              print(f"  - {e}")
+            sys.exit(1)
+          else:
+            print(f"✅ {len(files)}개 문서 검사 통과")
+          PYEOF
