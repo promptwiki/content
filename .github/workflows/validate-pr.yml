@@ -1,0 +1,107 @@
+name: Validate PR content
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**.md'
+      - '**.mdx'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install validator
+        run: npm install -g gray-matter zod
+
+      - name: Get changed MD files
+        id: changed
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            **/*.md
+            **/*.mdx
+
+      - name: Validate changed files
+        if: steps.changed.outputs.any_changed == 'true'
+        env:
+          CHANGED_FILES: ${{ steps.changed.outputs.all_changed_files }}
+        run: |
+          node - <<'EOF'
+          import { readFileSync } from 'fs';
+          import matter from 'gray-matter';
+
+          const REQUIRED = ['title', 'purpose', 'level', 'lang'];
+          const VALID_PURPOSE = ['guide', 'rule', 'template', 'example', 'reference'];
+          const VALID_LEVEL = ['beginner', 'intermediate', 'advanced'];
+          const VALID_LANG = ['ko', 'en'];
+          const FILE_PATH_RE = /^(ko|en)\/(guide|rule|template|example|reference)\/(beginner|intermediate|advanced)\/.+\.mdx?$/;
+          const MIN_BODY = 200;
+
+          const files = process.env.CHANGED_FILES.split(' ').filter(f => /\.mdx?$/.test(f));
+          const allErrors = [];
+
+          for (const f of files) {
+            const errors = [];
+            if (!FILE_PATH_RE.test(f)) {
+              errors.push(`파일 경로 규칙 위반: {lang}/{purpose}/{level}/파일명.md 형식이어야 합니다`);
+            }
+            const raw = readFileSync(f, 'utf-8');
+            const { data, content } = matter(raw);
+            for (const field of REQUIRED) {
+              if (!data[field]) errors.push(`필수 필드 누락: ${field}`);
+            }
+            if (data.purpose && !VALID_PURPOSE.includes(data.purpose))
+              errors.push(`유효하지 않은 purpose: ${data.purpose}`);
+            if (data.level && !VALID_LEVEL.includes(data.level))
+              errors.push(`유효하지 않은 level: ${data.level}`);
+            if (data.lang && !VALID_LANG.includes(data.lang))
+              errors.push(`유효하지 않은 lang: ${data.lang}`);
+            if (content.trim().length < MIN_BODY)
+              errors.push(`본문 너무 짧음 (${content.trim().length}자 / 최소 ${MIN_BODY}자)`);
+
+            if (errors.length) allErrors.push({ file: f, errors });
+          }
+
+          if (allErrors.length) {
+            console.error('## 검증 실패\n');
+            for (const { file, errors } of allErrors) {
+              console.error(`**${file}**`);
+              for (const e of errors) console.error(`  - ${e}`);
+            }
+            process.exit(1);
+          }
+          console.log(`검증 통과: ${files.length}개 파일`);
+          EOF
+
+      - name: Post result comment
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ **검증 실패**\n\n파일의 frontmatter와 본문 길이를 확인해주세요.\n\n로컬에서 미리 확인하려면:\n```bash\nnpx promptwiki-cli validate <파일경로>\n```'
+            })
+
+notify:
+  name: Notify web on merge
+  runs-on: ubuntu-latest
+  if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  needs: []
+  steps:
+    - name: Trigger web rebuild
+      uses: peter-evans/repository-dispatch@v3
+      with:
+        token: ${{ secrets.CONTENT_DISPATCH_TOKEN }}
+        repository: promptwiki/web
+        event-type: content-updated
