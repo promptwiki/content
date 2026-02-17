@@ -1,6 +1,5 @@
 ---
 title: "Context Window: AI가 한 번에 기억할 수 있는 범위"
-slug: "what-is-context-window"
 purpose: reference
 level: beginner
 persona:
@@ -10,14 +9,12 @@ persona:
 status: stable
 lang: ko
 translationKey: "what-is-context-window"
-summary: "Context Window의 개념, 토큰의 의미, 그리고 이것이 AI 활용에 어떤 영향을 주는지 설명한다."
 tags:
   - concept
   - context-window
   - token
-requiredKnowledge: []
-createdAt: 2026-02-18
-lastReviewed: 2026-02-18
+created: "2026-02-18"
+updated: "2026-02-18"
 contributors:
   - Raunplaymore
 ---
