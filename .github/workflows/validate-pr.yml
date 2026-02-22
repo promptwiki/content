@@ -90,7 +90,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '❌ **검증 실패**\n\n파일의 frontmatter와 본문 길이를 확인해주세요.\n\n로컬에서 미리 확인하려면:\n```bash\nnpx promptwiki-cli validate <파일경로>\n```'
+              body: '❌ **검증 실패**\n\n파일의 frontmatter와 본문 길이를 확인해주세요.\n\n로컬에서 미리 확인하려면:\n```bash\nnpx pmpt-cli validate <파일경로>\n```'
             })
 
 notify:
